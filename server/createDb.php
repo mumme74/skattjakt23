@@ -1,13 +1,6 @@
 <?php
 include 'connect.php';
 
-
-function execute($sql) {
-  global $db;
-  $stmt = $db->prepare($sql);
-  $stmt->execute();
-}
-
 function dropTable($table) {
   $sql = "DROP TABLE IF EXISTS $table ;";
   echo('drop' . $sql);
@@ -25,6 +18,7 @@ CREATE TABLE Users (
   email VARCHAR NOT NULL,
   password VARCHAR NOT NULL,
   lastLogin DATETIME DEFAULT current_timestamp,
+  updatedAt DATETIME DEFAULT current_timestamp,
   createdAt DATETIME DEFAULT current_timestamp
 )
 EOD);
@@ -36,6 +30,7 @@ CREATE TABLE Groups (
   name VARCHAR(30) UNIQUE NOT NULL,
   creatorId INTEGER NOT NULL,
   createdAt DATETIME DEFAULT current_timestamp,
+  updatedAt DATETIME DEFAULT current_timestamp,
   FOREIGN KEY(creatorId) REFERENCES Users(id)
     ON DELETE CASCADE ON UPDATE CASCADE
 )
@@ -102,6 +97,7 @@ CREATE TABLE Answers (
   questionId INTEGER,
   answeredBy INTEGER,
   str VARCHAR(255),
+  createdAt DATETIME DEFAULT current_timestamp,
   FOREIGN KEY(userId) REFERENCES Users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY(questionId) REFERENCES Questions(id)
@@ -117,7 +113,7 @@ CREATE TABLE AnswerChoices (
   questionChoiceId INTEGER,
   points REAL NOT NULL,
   autoCorrected BOOLEAN NOT NULL,
-  answeredAt DATETIME current_timestamp,
+  createdAt DATETIME DEFAULT current_timestamp,
   FOREIGN KEY(questionChoiceId) REFERENCES QuestionsChoices(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY(answerId) REFERENCES Answers(id)
@@ -125,25 +121,43 @@ CREATE TABLE AnswerChoices (
 )
 EOD);
 
+dropTable('Deletes');
+execute(<<<EOD
+CREATE TABLE Deletes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tableName VARCHAR NOT NULL,
+  deleteId INTEGER NOT NULL,
+  deletedAt DATETIME DEFAULT current_timestamp
+)
+EOD);
+
 // ---------------------------------------------------
 // Insert data
 
+$usersStr = implode(",\n",array_map(function ($row){
+  $row[2] = password_hash($row[2], PASSWORD_DEFAULT);
+  return '(' .
+    implode(',',
+      array_map(fn($itm)=>is_string($itm)?"'$itm'":$itm, $row)
+    ) . ')';
+},[
+  [1, 'jof', 'lazy', 'Fredrik', 'Johansson', 'Fredrik.Johansson3@vaxjo.se'],
+  [2, 'ohp', 'husbil', 'Pierre', 'Ohlsson', 'Pierre.Ohlsson@vaxjo.se'],
+  [3, 'lak', 'cyklist','Karl', 'Larsson', 'Karl.Larsson@vaxjo.se'],
+  [4, 'jopa', 'Öland', 'Paul', 'Johansson', 'Paul.Johansson@vaxjo.se'],
+  [5, 'astm', 'mx5a', 'Magnus', 'Åström', 'Magnus.Astrom@vaxjo.se'],
+  [6, 'lif', 'skogen', 'Fredrik', 'Lindström', 'Fredrik.Lidstrom@vaxjo.se'],
+  [7, 'hasn', 'Si! italiano', 'Sanja', 'Hadzic', 'Sanja.Hadzic@vaxjo.se'],
+  [8, 'ahm', 'Kia_owner', 'Martina', 'Åhnstrand', 'Martina.Ahnstrand@vaxjo.se'],
+  [9, 'kgb', 'Göteborg','Katarina', 'Grudeborn Bojestig', 'katarina.grudeborn-bojestig@vaxjo.se'],
+  [10, 'momi', 'Tingsvän', 'Marie-Louise', 'Mohlin-Gabrielsson', 'marie-louise.mohil-gabrielsson.@vaxjo.se'],
+  [11, 'nils', 'Välkommen!', 'Sofie', 'Nilsson', 'Sofie.Nilsson@vaxjo.se'],
+  [12, 'gem', 'Historia','Martin', 'Gereborg', 'Martin.Gereborg@vaxjo.se'],
+  [13, 'haki', 'saknar_du_oss?', 'Kristina', 'Hallberg', 'Kristina.Hallberg@vaxjo.se']
+]));
 execute(<<<EOD
-INSERT INTO Users  (id, password, userName, firstName, lastName, email)
-VALUES
-(1, 'jof', 'lazy', 'Fredrik', 'Johansson', 'Fredrik.Johansson3@vaxjo.se'),
-(2, 'ohp', 'husbil', 'Pierre', 'Ohlsson', 'Pierre.Ohlsson@vaxjo.se'),
-(3, 'lak', 'cyklist','Karl', 'Larsson', 'Karl.Larsson@vaxjo.se'),
-(4, 'jopa', 'Öland', 'Paul', 'Johansson', 'Paul.Johansson@vaxjo.se'),
-(5, 'astm', 'mx5a', 'Magnus', 'Åström', 'Magnus.Astrom@vaxjo.se'),
-(6, 'lif', 'skogen', 'Fredrik', 'Lindström', 'Fredrik.Lidstrom@vaxjo.se'),
-(7, 'hasn', 'Si! italiano', 'Sanja', 'Hadzic', 'Sanja.Hadzic@vaxjo.se'),
-(8, 'ahm', 'Kia_owner', 'Martina', 'Åhnstrand', 'Martina.Ahnstrand@vaxjo.se'),
-(9, 'kgb', 'Göteborg','Katarina', 'Grudeborn Bojestig', 'katarina.grudeborn-bojestig@vaxjo.se'),
-(10, 'momi', 'Tingsvän', 'Marie-Louise', 'Mohlin-Gabrielsson', 'marie-louise.mohil-gabrielsson.@vaxjo.se'),
-(11, 'nils', 'Välkommen!', 'Sofie', 'Nilsson', 'Sofie.Nilsson@vaxjo.se'),
-(12, 'gem', 'Historia','Martin', 'Gereborg', 'Martin.Gereborg@vaxjo.se'),
-(13, 'haki', 'saknar_du_oss?', 'Kristina', 'Hallberg', 'Kristina.Hallberg@vaxjo.se')
+INSERT INTO Users  (id, userName, password, firstName, lastName, email)
+VALUES $usersStr
 EOD);
 
 
